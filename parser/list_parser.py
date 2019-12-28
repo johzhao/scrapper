@@ -30,7 +30,7 @@ class ListParser(Parser):
             element = item.xpath('div[@class="comment"]/a[@class="review-num"]')
             comments = element[0].xpath('b/svgmtsi | b/text()')
             if len(comments) >= 2:
-                self.delegate.append_url(item, 'detail', url)
+                self.delegate.append_url(shop_url, 'detail', url)
             else:
                 logger.info(f'The comments of the shop {shop_name} was less than 10. Ignore it.')
 
