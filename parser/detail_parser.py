@@ -1,6 +1,10 @@
 import logging
 import os
 import re
+from posixpath import normpath
+from urllib.parse import urljoin
+from urllib.parse import urlparse
+from urllib.parse import urlunparse
 
 from lxml import etree
 # noinspection PyProtectedMember
@@ -59,6 +63,14 @@ class DetailParser(Parser):
         shop_info.service_rating = self._parse_service_rating(html, num_font_url)
 
         self.delegate.save_content(shop_info, 'detail')
+
+        element = html.xpath('//p[@class="comment-all"]/a/@href')
+        comment_url = urljoin(url, element[0])
+        url_components = urlparse(comment_url)
+        path = normpath(url_components.path)
+        comment_url = urlunparse((url_components.scheme, url_components.netloc, path, url_components.params,
+                                  url_components.query, url_components.fragment))
+        self.delegate.append_url(comment_url, 'comment', url)
 
     def _parse_css(self, content: str) -> str:
         css_matchs = self.css_pattern.findall(content)
