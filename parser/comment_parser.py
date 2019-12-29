@@ -10,6 +10,8 @@ from lxml import etree
 from lxml.etree import _Element
 
 from model.shop_review import ShopReview
+from parser.dianping.review_css_parser import ReviewCSSParser
+from parser.dianping.svg_parser import SvgParser
 from parser.parser import Parser
 
 logger = logging.getLogger(__name__)
@@ -21,6 +23,8 @@ class CommentParser(Parser):
     shop_id_pattern = re.compile(r'.*/shop/(\d+)?/.*')
     rating_pattern = re.compile(r'sml-str(\d+)')
     timestamp_pattern = re.compile(r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2})')
+    css_parser = ReviewCSSParser()
+    svg_parser = SvgParser()
 
     def __init__(self, delegate):
         super().__init__(delegate)
@@ -33,7 +37,6 @@ class CommentParser(Parser):
             raise Exception(f'Failed to parse comments from {content}')
 
         css_url = self._parse_css(content)
-        print(css_url)
 
         for element in elements:
             timestamp = self._parse_timestamp(element)
@@ -46,7 +49,7 @@ class CommentParser(Parser):
             shop_review.shop_id = self._parse_shop_id(url)
             shop_review.shop_name = self._parse_shop_name(element)
             shop_review.rating = self._parse_rating(element)
-            shop_review.comment = self._parse_comment(element)
+            shop_review.comment = self._parse_comment(css_url, element)
             shop_review.timestamp = timestamp
 
             self.delegate.save_content(shop_review, 'comment')
@@ -99,9 +102,31 @@ class CommentParser(Parser):
 
         return rating
 
-    def _parse_comment(self, html: _Element) -> str:
+    def _parse_comment(self, css_url: str, html: _Element) -> str:
         elements = html.xpath('div[@class="main-review"]/div[contains(@class, "review-words")]')
-        return NotImplemented
+        element = elements[0]
+
+        comment = []
+        if element.text is not None:
+            comment.append(element.text.strip())
+
+        for child in element.getchildren():
+            if child.tag == 'div':
+                break
+
+            if child.tag == 'img':
+                continue
+
+            if child.text is None:
+                svg_url, x, y = self.css_parser.get_position(css_url, child.tag, child.attrib['class'])
+                self.svg_parser.append_svg(svg_url)
+                text = self.svg_parser.parse(svg_url, x, y)
+                comment.append(text)
+
+            if child.tail is not None:
+                comment.append(child.tail.strip())
+
+        return ''.join(comment)
 
     def _parse_timestamp(self, html: _Element) -> str:
         elements = html.xpath(('div[@class="main-review"]/div[contains(@class, "misc-info")]/'

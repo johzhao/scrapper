@@ -4,12 +4,13 @@ import requests
 
 
 class ReviewCSSParser:
-    font_id_pattern = re.compile(r'\.(\w+)?\s*{font-family:\s*\'(.+?)\';}')
+    svg_id_pattern = re.compile(r'(\w*?)\[class\^="(\w*?)"\].*?background-image:\s*url\((.*?)\);')
+    class_pattern = re.compile(r'\.(\w*?){background:([.\d-]+?)px ([.\d-]+?)px;}')
 
     def __init__(self):
         self.cache = {}
 
-    def get_position(self, url: str, tag: str, class_: str) -> (float, float):
+    def get_position(self, url: str, tag: str, class_: str) -> (str, float, float):
         if url not in self.cache:
             content = self._get_resource(url)
             self._add_resource(url, content)
@@ -23,7 +24,7 @@ class ReviewCSSParser:
 
         position = mapping[tag][class_]
 
-        return position['x'], position['y']
+        return mapping[tag]['svg_url'], position['x'], position['y']
 
     @staticmethod
     def _get_resource(url: str) -> str:
@@ -33,16 +34,39 @@ class ReviewCSSParser:
         }).text
 
     def _add_resource(self, url: str, content: str):
-        # font_urls = {}
-        # matches = self.font_id_pattern.findall(content)
-        # for match in matches:
-        #     font_id, font_name = match
-        #     font_pattern = re.compile(rf'@font-face{{font-family: "{font_name}";src:url.*?;src:url.*?format.*?,url\("(.*?)"\)')
-        #     font_match = font_pattern.findall(content)
-        #     if len(font_match) != 1:
-        #         raise Exception(f'Find font of {font_id} return {len(font_match)} results.')
-        #
-        #     font_urls[font_id] = f'http:{font_match[0]}'
-        #
-        # self.cache[url] = font_urls
-        return NotImplemented
+        matches = self.svg_id_pattern.findall(content)
+        if not matches:
+            raise Exception(f'Failed to find svg in css')
+
+        prefixes = {}
+        mapping = {}
+        for item in matches:
+            mapping[item[0]] = {
+                'svg_url': f'http:{item[2]}',
+            }
+            prefixes[item[1]] = item[0]
+
+        matches = self.class_pattern.findall(content)
+        if not matches:
+            raise Exception(f'Failed to find class in css')
+
+        for item in matches:
+            for prefix, key in prefixes.items():
+                if item[0].startswith(prefix):
+                    # noinspection PyTypeChecker
+                    mapping[key][item[0]] = {
+                        'x': -float(item[1]),
+                        'y': -float(item[2]),
+                    }
+                    break
+
+        self.cache[url] = mapping
+
+
+def test_review_css_parser():
+    parser = ReviewCSSParser()
+    with open('../../test_files/29b5d13bd29b2ddf770815051787caf1.css', 'r') as ifile:
+        data = ifile.read()
+    parser._add_resource('29b5d13bd29b2ddf770815051787caf1.css', data)
+    svg_url, x, y = parser.get_position('29b5d13bd29b2ddf770815051787caf1.css', 'svgmtsi', 'wbepe')
+    print(f'svg_url: {svg_url}, x = {x}, y = {y}')
