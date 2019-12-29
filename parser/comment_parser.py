@@ -115,9 +115,9 @@ class CommentParser(Parser):
                 break
 
             if child.tag == 'img':
-                continue
-
-            if child.text is None:
+                # 图片的text也为None,但tail可能有文字
+                pass
+            elif child.text is None:
                 svg_url, x, y = self.css_parser.get_position(css_url, child.tag, child.attrib['class'])
                 self.svg_parser.append_svg(svg_url)
                 text = self.svg_parser.parse(svg_url, x, y)
