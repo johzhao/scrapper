@@ -4,6 +4,8 @@ import threading
 import time
 from typing import Optional
 
+from mongoengine import Document
+
 import config
 from downloader.downloader import Downloader
 from model.task import Task
@@ -27,18 +29,26 @@ class Scheduler(threading.Thread):
             'comment': CommentParser(self),
         }
         self.downloader = Downloader(config.HEADERS)
-        self.storage = Storage()
+        self.storage = Storage(config.MONGO_DATABASE, config.MONGO_HOST, config.MONGO_PORT)
         self.task_queue = TaskQueue(config.REDIS_DB_URL, config.REDIS_DB_DATABASE)
 
-    def save_content(self, content: dict, type_: str):
+    def save_content(self, content: Document, type_: str):
         self.storage.save_content(content, type_)
 
     def append_url(self, url: str, type_: str, reference: str):
         self.task_queue.push_task(Task(url, type_, reference))
 
     def run(self) -> None:
-        task = self._get_top_task()
-        while task is not None:
+        while True:
+            task = self.task_queue.get_top_task('detail')
+            if task is None:
+                task = self.task_queue.get_top_task('list')
+            # if task is None:
+            #     task = self.task_queue.get_top_task('comment')
+
+            if task is None:
+                break
+
             content = self.downloader.download_url(task.url, task.reference)
             self.parsers[task.type_].parse(task.url, content)
             self.task_queue.drop_top_task(task.type_)
@@ -47,8 +57,6 @@ class Scheduler(threading.Thread):
             delay = config.DOWNLOAD_DELAY + random.randint(-20, 20) / 10
             logger.info(f'Delay for {delay} seconds.')
             time.sleep(delay)
-
-            task = self._get_top_task()
 
     def _get_top_task(self) -> Optional[Task]:
         result = self.task_queue.get_top_task('list')

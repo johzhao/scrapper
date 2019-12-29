@@ -1,5 +1,7 @@
 import logging
 
+from mongoengine import Document
+
 from parser.comment_parser import CommentParser
 from parser.detail_parser import DetailParser
 from parser.list_parser import ListParser
@@ -10,7 +12,7 @@ logger = logging.getLogger(__name__)
 
 class MockParserDelegate:
 
-    def save_content(self, content: dict, type_: str):
+    def save_content(self, content: Document, type_: str):
         logger.info(f'Save type {type_}, content {content}')
         pass
 

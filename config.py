@@ -17,7 +17,9 @@ HEADERS = {
                '_lxsdk_s=16f42239b3a-bed-93c-d9e%7C%7C305'),
 }
 
-MONGO_DB_HOST = 'localhost'
+MONGO_HOST = 'localhost'
+MONGO_PORT = 27017
+MONGO_DATABASE = 'dianping'
 
 
 REDIS_DB_URL = 'redis://localhost:6379'

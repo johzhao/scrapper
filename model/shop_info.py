@@ -11,7 +11,7 @@ class ShopInfo(Document):
     phone_number = StringField()
     url = StringField()
     rating = StringField()
-    reviews = StringField()
+    reviews = IntField()
     avg_cost = FloatField()
     production_rating = FloatField()
     environment_rating = FloatField()
