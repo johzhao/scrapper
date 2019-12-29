@@ -23,6 +23,6 @@ class Downloader:
         if response.status_code != 200:
             raise Exception(f'The status code for url {url} was {response.status_code}')
 
-        self.session.headers['Cookie'] = response.cookies
+        self.session.cookies = response.cookies
         logger.info(f'Succeed download the url {url}')
         return response.text

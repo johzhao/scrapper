@@ -1,10 +1,7 @@
 import logging
 import os
 import re
-from posixpath import normpath
-from urllib.parse import urljoin
-from urllib.parse import urlparse
-from urllib.parse import urlunparse
+from typing import Optional
 
 from lxml import etree
 # noinspection PyProtectedMember
@@ -24,10 +21,10 @@ class DetailParser(Parser):
     css_parser = ShopDetailCSSParser()
     css_pattern = re.compile(r'(//s3plus.meituan.net/v1/.+?/svgtextcss/.+?\.css)')
     review_count_pattern = re.compile(r'(\d+?)\s*?条评论')
-    avg_cost_pattern = re.compile(r'消费:(\d+?)元')
-    prod_rating_pattern = re.compile(r'产品:([.0-9]+)')
-    env_rating_pattern = re.compile(r'环境:([.0-9]+)')
-    service_rating_pattern = re.compile(r'服务:([.0-9]+)')
+    avg_cost_pattern = re.compile(r'消费:\s*?(\d+?)\s*?元')
+    prod_rating_pattern = re.compile(r'产品:\s*?([.0-9]+)')
+    env_rating_pattern = re.compile(r'环境:\s*?([.0-9]+)')
+    service_rating_pattern = re.compile(r'服务:\s*?([.0-9]+)')
     phone_number_pattern = re.compile(r'电话：(.*)')
 
     def __init__(self, delegate):
@@ -64,13 +61,13 @@ class DetailParser(Parser):
 
         self.delegate.save_content(shop_info, 'detail')
 
-        element = html.xpath('//p[@class="comment-all"]/a/@href')
-        comment_url = urljoin(url, element[0])
-        url_components = urlparse(comment_url)
-        path = normpath(url_components.path)
-        comment_url = urlunparse((url_components.scheme, url_components.netloc, path, url_components.params,
-                                  url_components.query, url_components.fragment))
-        self.delegate.append_url(comment_url, 'comment', url)
+        # element = html.xpath('//p[@class="comment-all"]/a/@href')
+        # comment_url = urljoin(url, element[0])
+        # url_components = urlparse(comment_url)
+        # path = normpath(url_components.path)
+        # comment_url = urlunparse((url_components.scheme, url_components.netloc, path, url_components.params,
+        #                           url_components.query, url_components.fragment))
+        # self.delegate.append_url(comment_url, 'comment', url)
 
     def _parse_css(self, content: str) -> str:
         css_matchs = self.css_pattern.findall(content)
@@ -97,36 +94,40 @@ class DetailParser(Parser):
             raise Exception(f'Not found review count from {content}')
         return int(matches[0])
 
-    def _parse_avg_cost(self, html: _Element, num_font_url: str) -> float:
+    def _parse_avg_cost(self, html: _Element, num_font_url: str) -> Optional[float]:
         elements = html.xpath('//span[@id="avgPriceTitle"]')
         content = self._parse_number(elements[0], num_font_url)
         matches = self.avg_cost_pattern.findall(content)
         if len(matches) != 1:
-            raise Exception(f'Not found avg cost from {content}')
+            logger.warning(f'Not found production rating from {content}')
+            return None
         return float(matches[0])
 
-    def _parse_prod_rating(self, html: _Element, num_font_url: str) -> float:
+    def _parse_prod_rating(self, html: _Element, num_font_url: str) -> Optional[float]:
         elements = html.xpath('//span[@id="comment_score"]/span[1]')
         content = self._parse_number(elements[0], num_font_url)
         matches = self.prod_rating_pattern.findall(content)
         if len(matches) != 1:
-            raise Exception(f'Not found production rating from {content}')
+            logger.warning(f'Not found production rating from {content}')
+            return None
         return float(matches[0])
 
-    def _parse_env_rating(self, html: _Element, num_font_url: str) -> float:
+    def _parse_env_rating(self, html: _Element, num_font_url: str) -> Optional[float]:
         elements = html.xpath('//span[@id="comment_score"]/span[2]')
         content = self._parse_number(elements[0], num_font_url)
         matches = self.env_rating_pattern.findall(content)
         if len(matches) != 1:
-            raise Exception(f'Not found environment rating from {content}')
+            logger.warning(f'Not found environment rating from {content}')
+            return None
         return float(matches[0])
 
-    def _parse_service_rating(self, html: _Element, num_font_url: str) -> float:
+    def _parse_service_rating(self, html: _Element, num_font_url: str) -> Optional[float]:
         elements = html.xpath('//span[@id="comment_score"]/span[3]')
         content = self._parse_number(elements[0], num_font_url)
         matches = self.service_rating_pattern.findall(content)
         if len(matches) != 1:
-            raise Exception(f'Not found service rating from {content}')
+            logger.warning(f'Not found service rating from {content}')
+            return None
         return float(matches[0])
 
     def _parse_address(self, html: _Element, num_font_url: str, address_font_url: str) -> str:

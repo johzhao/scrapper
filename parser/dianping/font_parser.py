@@ -11,11 +11,11 @@ logger.addHandler(logging.NullHandler())
 
 
 class FontParser:
+    base_glyph_mapping = {}
+    base_str_mapping = {}
+    font_mapping = {}
 
     def __init__(self, base_font_file: str, base_font_mapping_file: str):
-        self.base_glyph_mapping = {}
-        self.base_str_mapping = {}
-        self.font_mapping = {}
         self._create_base_mapping(base_font_file, base_font_mapping_file)
 
     def append_font(self, url: str) -> None:

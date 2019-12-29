@@ -1,5 +1,6 @@
 import logging
-logging.basicConfig(level=logging.INFO)
+log_format = ' %(asctime)s - %(levelname)s - %(filename)s - %(lineno)s - %(message)s'
+logging.basicConfig(level=logging.INFO, format=log_format)
 
 from scheduler.scheduler import Scheduler
 
