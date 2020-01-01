@@ -4,8 +4,6 @@ import redis
 
 from model.task import Task
 
-TASK_KEY = 'scrapper_tasks'
-
 
 class TaskQueue:
 
@@ -13,7 +11,11 @@ class TaskQueue:
         self.redis = redis.Redis.from_url(redis_url, db=db)
 
     def push_task(self, task: Task):
-        self.redis.rpush(self._get_task_key(task.type_), str(task))
+        key = self._get_task_key(task.type_)
+        if task.type_ == 'comment':
+            self.redis.linsert(key, 'AFTER', task.reference, str(task))
+        else:
+            self.redis.rpush(key, str(task))
 
     def get_top_task(self, type_: str) -> Optional[Task]:
         key = self._get_task_key(type_)

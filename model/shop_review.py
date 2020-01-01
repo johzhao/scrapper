@@ -5,13 +5,13 @@ from mongoengine import StringField
 
 
 class ShopReview(Document):
-    id = IntField()
-    username = StringField(required=True)
+    id = StringField(required=True, primary_key=True)
+    username = StringField()
     shop_id = IntField(required=True)
     shop_name = StringField(required=True)
     rating = FloatField()
-    comment = StringField()
-    timestamp = StringField()
+    comment = StringField(required=True)
+    timestamp = StringField(required=True)
 
     def __str__(self):
         return (f'<ShopReview, id={self.id}, username={self.username}, shop_id={self.shop_id}, '
