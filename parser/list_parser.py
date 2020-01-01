@@ -40,17 +40,20 @@ class ListParser(Parser):
             logger.info(f'Got one shop {shop_name} with url {shop_url}')
 
             # 解析评论数量，剔除评论数少于10条的店铺
-            element = item.xpath('div[@class="comment"]/a[@class="review-num"]//b')[0]
-            review_count = self._parse_review_count(element, 'num_font_url')
-            if review_count > 10:
-                shops.append(shop_url)
-            else:
-                logger.info(f'The comments of the shop {shop_name} was less than 10. Ignore it.')
+            elements = item.xpath('div[@class="comment"]/a[@class="review-num"]//b')
+            if elements:
+                element = elements[0]
+                review_count = self._parse_review_count(element, 'num_font_url')
+                if review_count > 10:
+                    shops.append(shop_url)
+                else:
+                    logger.info(f'The comments of the shop {shop_name} was less than 10. Ignore it.')
 
         # 获取下一页的链接
-        # result = html.xpath('//div[@class="page"]/a[@class="next"]/@href')
-        # for item in result:
-        #     self.delegate.append_url(item, 'list', url)
+        if shops:
+            result = html.xpath('//div[@class="page"]/a[@class="next"]/@href')
+            for item in result:
+                self.delegate.append_url(item, 'list', url)
 
         for shop in shops:
             self.delegate.append_url(shop, 'detail', url)

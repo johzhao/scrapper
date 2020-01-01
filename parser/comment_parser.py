@@ -40,7 +40,7 @@ class CommentParser(Parser):
 
         for element in elements:
             timestamp = self._parse_timestamp(element)
-            if not timestamp.startswith('2019'):
+            if not (timestamp.startswith('2019') or timestamp.startswith('2020')):
                 parse_next_page = False
                 continue
 

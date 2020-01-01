@@ -168,6 +168,9 @@ class DetailParser(Parser):
             raise
 
         content = data['msg']['shopInfo']['phoneNo']
+        if not content:
+            return None
+
         html = etree.HTML(content, etree.HTMLParser())
         elements = html.xpath('//body')
         content = self._parse_number(elements[0], num_font_url)
@@ -179,7 +182,9 @@ class DetailParser(Parser):
             result.append(element.text.strip())
 
         for child in element.iterchildren():
-            if child.attrib['class'] == 'num':
+            if child.tag == 'p':
+                result.append(self._parse_number(child, num_font_url))
+            elif child.attrib['class'] == 'num':
                 result.append(self.font_parser.parse('num', num_font_url, child.text).strip())
             else:
                 result.append(child.text.strip())
