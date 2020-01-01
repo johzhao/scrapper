@@ -5,7 +5,7 @@ from lxml import etree
 # noinspection PyProtectedMember
 from lxml.etree import _Element
 
-from parser.dianping.font_parser import FontParser
+# from parser.dianping.font_parser import FontParser
 from parser.dianping.shop_detail_css_parser import ShopDetailCSSParser
 from parser.parser import Parser
 
@@ -14,7 +14,7 @@ logger.addHandler(logging.NullHandler())
 
 
 class ListParser(Parser):
-    font_parser = FontParser('./test_files/basefont.woff', './test_files/basefont.json')
+    # font_parser = FontParser('./test_files/basefont.woff', './test_files/basefont.json')
     css_parser = ShopDetailCSSParser()
     css_pattern = re.compile(r'(//s3plus.meituan.net/v1/.+?/svgtextcss/.+?\.css)')
 
@@ -29,9 +29,9 @@ class ListParser(Parser):
         if len(result) == 0:
             raise Exception(f'Failed to parse shop link from list url {url}')
 
-        css_url = self._parse_css(content)
-        num_font_url = self.css_parser.get_font_url_by_type(css_url, 'shopNum')
-        self.font_parser.append_font(num_font_url)
+        # css_url = self._parse_css(content)
+        # num_font_url = self.css_parser.get_font_url_by_type(css_url, 'shopNum')
+        # self.font_parser.append_font(num_font_url)
 
         shops = []
         for item in result:
@@ -41,16 +41,16 @@ class ListParser(Parser):
 
             # 解析评论数量，剔除评论数少于10条的店铺
             element = item.xpath('div[@class="comment"]/a[@class="review-num"]//b')[0]
-            review_count = self._parse_review_count(element, num_font_url)
+            review_count = self._parse_review_count(element, 'num_font_url')
             if review_count > 10:
                 shops.append(shop_url)
             else:
                 logger.info(f'The comments of the shop {shop_name} was less than 10. Ignore it.')
 
         # 获取下一页的链接
-        result = html.xpath('//div[@class="page"]/a[@class="next"]/@href')
-        for item in result:
-            self.delegate.append_url(item, 'list', url)
+        # result = html.xpath('//div[@class="page"]/a[@class="next"]/@href')
+        # for item in result:
+        #     self.delegate.append_url(item, 'list', url)
 
         for shop in shops:
             self.delegate.append_url(shop, 'detail', url)

@@ -50,7 +50,15 @@ class Scheduler(threading.Thread):
                 break
 
             content = self.downloader.download_url(task.url, task.reference)
-            self.parsers[task.type_].parse(task.url, content)
+            try:
+                self.parsers[task.type_].parse(task.url, content)
+            except Exception as e:
+                with open('exception.html', 'w') as ofile:
+                    ofile.write(content)
+                logger.error(f'Parse failed with error:')
+                logger.exception(e)
+                raise
+
             self.task_queue.drop_top_task(task.type_)
 
             # 等待指定的秒数+-2s
