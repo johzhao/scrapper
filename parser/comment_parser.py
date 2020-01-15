@@ -1,4 +1,6 @@
 import logging
+import os
+import random
 import re
 from posixpath import normpath
 from urllib.parse import urljoin
@@ -19,7 +21,7 @@ logger.addHandler(logging.NullHandler())
 
 
 class CommentParser(Parser):
-    css_pattern = re.compile(r'(//s3plus.meituan.net/v1/.+?/svgtextcss/.+?\.css)')
+    css_pattern = re.compile(r'(//s3plus.+?/svgtextcss/.+?\.css)')
     shop_id_pattern = re.compile(r'.*/shop/(\d+)?/.*')
     page_id_pattern = re.compile(r'.*/shop/\d+?/review_all/p(\d+?)')
     rating_pattern = re.compile(r'sml-str(\d+)')
@@ -39,7 +41,7 @@ class CommentParser(Parser):
 
         css_url = self._parse_css(content)
 
-        index = 1
+        reviews = []
         for element in elements:
             timestamp = self._parse_timestamp(element)
             if not (timestamp.startswith('2019') or timestamp.startswith('2020')):
@@ -47,16 +49,15 @@ class CommentParser(Parser):
                 continue
 
             shop_review = ShopReview()
-            shop_review.id = self._parse_comment_id(url, index)
-            shop_review.username = self._parse_username(element)
+            user_id, shop_review.username = self._parse_username(element)
+            shop_review.id = self._parse_comment_id(url, user_id)
             shop_review.shop_id = self._parse_shop_id(url)
             shop_review.shop_name = self._parse_shop_name(element)
             shop_review.rating = self._parse_rating(element)
             shop_review.comment = self._parse_comment(css_url, element)
             shop_review.timestamp = timestamp
 
-            self.delegate.save_content(shop_review, 'comment')
-            index += 1
+            reviews.append(shop_review)
 
         if parse_next_page:
             elements = html.xpath('//a[@class="NextPage"]/@href')
@@ -68,6 +69,9 @@ class CommentParser(Parser):
                                           url_components.query, url_components.fragment))
                 self.delegate.append_url(comment_url, 'comment', url)
 
+        for review in reviews:
+            self.delegate.save_content(review, 'comment')
+
     def _parse_css(self, content: str) -> str:
         css_matchs = self.css_pattern.findall(content)
         if len(css_matchs) != 1:
@@ -75,24 +79,24 @@ class CommentParser(Parser):
 
         return f'http:{css_matchs[0]}'
 
-    def _parse_comment_id(self, url: str, comment_id: int) -> str:
+    def _parse_comment_id(self, url: str, user_id: str) -> str:
         matches = self.shop_id_pattern.findall(url)
         if len(matches) != 1:
             raise Exception(f'Failed to parse shop id from {url}')
         shop_id = matches[0].strip()
-
-        matches = self.page_id_pattern.findall(url)
-        if not matches:
-            page_id = 1
-        else:
-            page_id = matches[0].strip()
-
-        return f'{shop_id}-{page_id}-{comment_id}'
+        return f'{shop_id}-{user_id}'
 
     @staticmethod
-    def _parse_username(html: _Element) -> str:
-        element = html.xpath('div[@class="main-review"]/div[@class="dper-info"]/a/text()')[0]
-        return element.strip()
+    def _parse_username(html: _Element) -> (str, str):
+        element = html.xpath('div[@class="main-review"]/div[@class="dper-info"]/a')[0]
+        if 'href' in element.attrib:
+            href = element.attrib['href']
+            _, user_id = os.path.split(href)
+        else:
+            user_id = random.randint(10000, 50000)
+            user_id = f'{user_id}'
+        user_name = element.text.strip()
+        return user_id, user_name
 
     def _parse_shop_id(self, url: str) -> str:
         matches = self.shop_id_pattern.findall(url)

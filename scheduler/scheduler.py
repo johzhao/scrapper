@@ -26,6 +26,7 @@ class Scheduler(threading.Thread):
         self.parsers = {
             'list': ListParser(self),
             'detail': DetailParser(self),
+            'comment_first': CommentParser(self),
             'comment': CommentParser(self),
         }
         self.downloader = Downloader(config.HEADERS)
@@ -43,8 +44,10 @@ class Scheduler(threading.Thread):
             task = self.task_queue.get_top_task('detail')
             if task is None:
                 task = self.task_queue.get_top_task('list')
-            # if task is None:
-            #     task = self.task_queue.get_top_task('comment')
+            if task is None:
+                task = self.task_queue.get_top_task('comment')
+            if task is None:
+                task = self.task_queue.get_top_task('comment_first')
 
             if task is None:
                 break
@@ -62,7 +65,7 @@ class Scheduler(threading.Thread):
             self.task_queue.drop_top_task(task.type_)
 
             # 等待指定的秒数+-2s
-            delay = config.DOWNLOAD_DELAY + random.randint(-20, 20) / 10
+            delay = config.DOWNLOAD_DELAY + random.randint(20, 50) / 10
             logger.info(f'Delay for {delay} seconds.')
             time.sleep(delay)
 
